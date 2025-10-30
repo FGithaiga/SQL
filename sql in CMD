@@ -1,0 +1,85 @@
+Open the sqlite3 shell and create/open a database file
+
+From Command Prompt:
+
+C:\sqlite\sqlite3.exe my_database.db
+
+
+or (if already in sqlite shell) at sqlite> prompt:
+
+.open my_database.db
+
+
+Create the people table (schema)
+Paste this at the sqlite> prompt (SQL statements end with ;):
+
+CREATE TABLE IF NOT EXISTS people (
+  id INTEGER PRIMARY KEY,
+  name TEXT,
+  age INTEGER,
+  email TEXT
+);
+
+
+Check the created tables and schema
+
+.tables           -- list tables
+.schema people    -- show CREATE TABLE statement for people
+
+
+Insert records (rows)
+
+INSERT INTO people (name, age, email) VALUES ('Bob', 29, 'bob@flatironschool.com');
+INSERT INTO people (name, age, email) VALUES ('James', 28, 'james@flatironschool.com');
+INSERT INTO people (name, age, email) VALUES ('John', 28, 'john@flatironschool.com');
+
+
+Basic SELECT queries
+
+Select all columns, all rows:
+
+SELECT * FROM people;
+
+
+Select specific columns:
+
+SELECT name, email FROM people;
+
+
+Filter rows with WHERE:
+
+SELECT * FROM people WHERE age = 28;
+
+
+Limit number of rows:
+
+SELECT * FROM people LIMIT 2;
+
+
+Order results:
+
+SELECT * FROM people ORDER BY name ASC;  -- ASC or DESC
+
+
+Aggregate / grouping example
+
+Count people by age:
+
+SELECT age, COUNT(*) AS count FROM people GROUP BY age;
+
+
+Update and delete
+
+Update an email:
+
+UPDATE people SET email = 'bob.new@example.com' WHERE name = 'Bob';
+
+
+Delete a row:
+
+DELETE FROM people WHERE name = 'John';
+
+
+Exit
+
+.exit

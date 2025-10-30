@@ -1,0 +1,328 @@
+Special commands to sqlite3 (dot-commands)
+Most of the time, sqlite3 just reads lines of input and passes them on to the SQLite library for execution. But input lines that begin with a dot (".") are intercepted and interpreted by the sqlite3 program itself. These "dot commands" are typically used to change the output format of queries, or to execute certain prepackaged query statements. There were originally just a few dot commands, but over the years many new features have accumulated so that today there are over 60.
+
+For a listing of the available dot commands, you can enter ".help" with no arguments. Or enter ".help TOPIC" for detailed information about TOPIC. The list of available dot-commands follows:
+
+sqlite> .help
+.archive ...             Manage SQL archives
+.auth ON|OFF             Show authorizer callbacks
+.backup ?DB? FILE        Backup DB (default "main") to FILE
+.bail on|off             Stop after hitting an error.  Default OFF
+.cd DIRECTORY            Change the working directory to DIRECTORY
+.changes on|off          Show number of rows changed by SQL
+.check GLOB              Fail if output since .testcase does not match
+.clone NEWDB             Clone data into NEWDB from the existing database
+.connection [close] [#]  Open or close an auxiliary database connection
+.crlf ?on|off?           Whether or not to use \r\n line endings
+.databases               List names and files of attached databases
+.dbconfig ?op? ?val?     List or change sqlite3_db_config() options
+.dbinfo ?DB?             Show status information about the database
+.dbtotxt                 Hex dump of the database file
+.dump ?OBJECTS?          Render database content as SQL
+.echo on|off             Turn command echo on or off
+.eqp on|off|full|...     Enable or disable automatic EXPLAIN QUERY PLAN
+.excel                   Display the output of next command in spreadsheet
+.exit ?CODE?             Exit this program with return-code CODE
+.expert                  EXPERIMENTAL. Suggest indexes for queries
+.explain ?on|off|auto?   Change the EXPLAIN formatting mode.  Default: auto
+.filectrl CMD ...        Run various sqlite3_file_control() operations
+.fullschema ?--indent?   Show schema and the content of sqlite_stat tables
+.headers on|off          Turn display of headers on or off
+.help ?-all? ?PATTERN?   Show help text for PATTERN
+.import FILE TABLE       Import data from FILE into TABLE
+.indexes ?TABLE?         Show names of indexes
+.intck ?STEPS_PER_UNLOCK?  Run an incremental integrity check on the db
+.limit ?LIMIT? ?VAL?     Display or change the value of an SQLITE_LIMIT
+.lint OPTIONS            Report potential schema issues.
+.load FILE ?ENTRY?       Load an extension library
+.log FILE|on|off         Turn logging on or off.  FILE can be stderr/stdout
+.mode MODE ?OPTIONS?     Set output mode
+.nonce STRING            Suspend safe mode for one command if nonce matches
+.nullvalue STRING        Use STRING in place of NULL values
+.once ?OPTIONS? ?FILE?   Output for the next SQL command only to FILE
+.open ?OPTIONS? ?FILE?   Close existing database and reopen FILE
+.output ?FILE?           Send output to FILE or stdout if FILE is omitted
+.parameter CMD ...       Manage SQL parameter bindings
+.print STRING...         Print literal STRING
+.progress N              Invoke progress handler after every N opcodes
+.prompt MAIN CONTINUE    Replace the standard prompts
+.quit                    Stop interpreting input stream, exit if primary.
+.read FILE               Read input from FILE or command output
+.recover                 Recover as much data as possible from corrupt db.
+.restore ?DB? FILE       Restore content of DB (default "main") from FILE
+.save ?OPTIONS? FILE     Write database to FILE (an alias for .backup ...)
+.scanstats on|off|est    Turn sqlite3_stmt_scanstatus() metrics on or off
+.schema ?PATTERN?        Show the CREATE statements matching PATTERN
+.separator COL ?ROW?     Change the column and row separators
+.session ?NAME? CMD ...  Create or control sessions
+.sha3sum ...             Compute a SHA3 hash of database content
+.shell CMD ARGS...       Run CMD ARGS... in a system shell
+.show                    Show the current values for various settings
+.stats ?ARG?             Show stats or turn stats on or off
+.system CMD ARGS...      Run CMD ARGS... in a system shell
+.tables ?TABLE?          List names of tables matching LIKE pattern TABLE
+.timeout MS              Try opening locked tables for MS milliseconds
+.timer on|off            Turn SQL timer on or off
+.trace ?OPTIONS?         Output each SQL statement as it is run
+.unmodule NAME ...       Unregister virtual table modules
+.version                 Show source, library and compiler versions
+.vfsinfo ?AUX?           Information about the top-level VFS
+.vfslist                 List all available VFSes
+.vfsname ?AUX?           Print the name of the VFS stack
+.width NUM1 NUM2 ...     Set minimum column widths for columnar output
+.www                     Display output of the next command in web browser
+sqlite>
+
+Rules for "dot-commands", SQL and More
+3.1. Line Structure
+The CLI's input is parsed into a sequence consisting of:
+
+SQL statements;
+dot-commands; or
+CLI comments
+SQL statements are free-form, and can be spread across multiple lines, with whitespace or SQL comments embedded anywhere. They are terminated by either a ';' character at the end of an input line, or a '/' character or the word "go" on a line by itself. When not at the end of an input line, the ';' character acts to separate SQL statements. Trailing whitespace is ignored for purposes of termination.
+
+A dot-command has a more restrictive structure:
+
+It must begin with its "." at the left margin with no preceding whitespace.
+It must be entirely contained on a single input line.
+It cannot occur in the middle of an ordinary SQL statement. In other words, it cannot occur at a continuation prompt.
+There is no comment syntax for dot-commands.
+The CLI also accepts whole-line comments that begin with a '#' character and extend to the end of the line. There can be no whitespace prior to the '#'.
+
+3.2. Dot-command arguments
+The arguments passed to dot-commands are parsed from the command tail, per these rules:
+
+The trailing newline and any other trailing whitespace is discarded;
+Whitespace immediately following the dot-command name, or any argument input end bound is discarded;
+An argument input begins with any non-whitespace character;
+An argument input ends with a character which depends upon its leading character thusly:
+for a leading single-quote ('), a single-quote acts as the end delimiter;
+for a leading double-quote ("), an unescaped double-quote acts as the end delimiter;
+for any other leading character, the end delimiter is any whitespace; and
+the command tail end acts as the end delimiter for any argument;
+Within a double-quoted argument input, a backslash-escaped double-quote is part of the argument rather than its terminating quote;
+Within a double-quoted argument, traditional C-string literal, backslash escape sequence translation is done; and
+Argument input delimiters (the bounding quotes or whitespace) are discarded to yield the passed argument.
+3.3. Dot-command execution
+The dot-commands are interpreted by the sqlite3.exe command-line program, not by SQLite itself. So none of the dot-commands will work as an argument to SQLite interfaces such as sqlite3_prepare() or sqlite3_exec().
+
+4. Changing Output Formats
+The sqlite3 program is able to show the results of a query in 14 different output formats:
+
+ascii
+box
+csv
+column
+html
+insert
+json
+line
+list
+markdown
+quote
+table
+tabs
+tcl
+You can use the ".mode" dot command to switch between these output formats. The default output mode is "list". In list mode, each row of a query result is written on one line of output and each column within that row is separated by a specific separator string. The default separator is a pipe symbol ("|"). List mode is especially useful when you are going to send the output of a query to another program (such as AWK) for additional processing.
+
+sqlite> .mode list
+sqlite> select * from tbl1;
+hello!|10
+goodbye|20
+sqlite>
+Type ".mode" with no arguments to show the current mode:
+
+sqlite> .mode
+current output mode: list
+sqlite>
+Use the ".separator" dot command to change the separator. For example, to change the separator to a comma and a space, you could do this:
+
+sqlite> .separator ", "
+sqlite> select * from tbl1;
+hello!, 10
+goodbye, 20
+sqlite>
+The next ".mode" command might reset the ".separator" back to some default value (depending on its arguments). So you will likely need to repeat the ".separator" command whenever you change modes if you want to continue using a non-standard separator.
+
+In "quote" mode, the output is formatted as SQL literals. Strings are enclosed in single-quotes and internal single-quotes are escaped by doubling. Blobs are displayed in hexadecimal blob literal notation (Ex: x'abcd'). Numbers are displayed as ASCII text and NULL values are shown as "NULL". All columns are separated from each other by a comma (or whatever alternative character is selected using ".separator").
+
+sqlite> .mode quote
+sqlite> select * from tbl1;
+'hello!',10
+'goodbye',20
+sqlite>
+In "line" mode, each column in a row of the database is shown on a line by itself. Each line consists of the column name, an equal sign and the column data. Successive records are separated by a blank line. Here is an example of line mode output:
+
+sqlite> .mode line
+sqlite> select * from tbl1;
+one = hello!
+two = 10
+
+one = goodbye
+two = 20
+sqlite>
+In column mode, each record is shown on a separate line with the data aligned in columns. For example:
+
+sqlite> .mode column
+sqlite> select * from tbl1;
+one       two
+--------  ---
+hello!    10
+goodbye   20
+sqlite>
+In "column" mode (and also in "box", "table", and "markdown" modes) the width of columns adjusts automatically. But you can override this, providing a specified width for each column using the ".width" command. The arguments to ".width" are integers which are the number of characters to devote to each column. Negative numbers mean right-justify. Thus:
+
+sqlite> .width 12 -6
+sqlite> select * from tbl1;
+one              two
+------------  ------
+hello!            10
+goodbye           20
+sqlite>
+A width of 0 means the column width is chosen automatically. Unspecified column widths become zero. Hence, the command ".width" with no arguments resets all column widths to zero and hence causes all column widths to be determined automatically.
+
+The "column" mode is a tabular output format. Other tabular output formats are "box", "markdown", and "table":
+
+sqlite> .width
+sqlite> .mode markdown
+sqlite> select * from tbl1;
+|   one   | two |
+|---------|-----|
+| hello!  | 10  |
+| goodbye | 20  |
+sqlite> .mode table
+sqlite> select * from tbl1;
++---------+-----+
+|   one   | two |
++---------+-----+
+| hello!  | 10  |
+| goodbye | 20  |
++---------+-----+
+sqlite> .mode box
+sqlite> select * from tbl1;
+┌─────────┬─────┐
+│   one   │ two │
+├─────────┼─────┤
+│ hello!  │ 10  │
+│ goodbye │ 20  │
+└─────────┴─────┘
+sqlite>
+The columnar modes accept some additional options to control formatting. The "--wrap N" option (where N is an integer) causes columns to wrap text that is longer than N characters. Wrapping is disabled if N is zero.
+
+sqlite> insert into tbl1 values('The quick fox jumps over a lazy brown dog.',90);
+sqlite> .mode box --wrap 30
+sqlite> select * from tbl1 where two>50;
+┌────────────────────────────────┬─────┐
+│              one               │ two │
+├────────────────────────────────┼─────┤
+│ The quick fox jumps over a laz │ 90  │
+│ y brown dog.                   │     │
+└────────────────────────────────┴─────┘
+sqlite>
+Wrapping happens after exactly N characters, which might be in the middle of a word. To wrap at a word boundary, add the "--wordwrap on" option (or just "-ww" for short):
+
+sqlite> .mode box --wrap 30 -ww
+sqlite> select * from tbl1 where two>50;
+┌─────────────────────────────┬─────┐
+│             one             │ two │
+├─────────────────────────────┼─────┤
+│ The quick fox jumps over a  │ 90  │
+│ lazy brown dog.             │     │
+└─────────────────────────────┴─────┘
+sqlite>
+The "--quote" option causes the results in each column to be quoted like an SQL literal, as in the "quote" mode. See the on-line help for additional options.
+
+The command ".mode box --wrap 60 --quote" is so useful for general-purpose database queries that it is given its own alias. Instead of typing out that whole 27-character command, you can just say ".mode qbox".
+
+Another useful output mode is "insert". In insert mode, the output is formatted to look like SQL INSERT statements. Use insert mode to generate text that can later be used to input data into a different database.
+
+When specifying insert mode, you have to give an extra argument which is the name of the table to be inserted into. For example:
+
+sqlite> .mode insert new_table
+sqlite> select * from tbl1 where two<50;
+INSERT INTO "new_table" VALUES('hello',10);
+INSERT INTO "new_table" VALUES('goodbye',20);
+sqlite>
+If .headers on is active, the INSERT output will include that list of column names:
+
+sqlite> .mode insert mytable
+sqlite> .headers on
+sqlite> select 1 a, 2 b, 3 c;
+INSERT INTO mytable(a,b,c) VALUES(1,2,3);
+sqlite>
+Other output modes include "csv", "json", and "tcl". Try these yourself to see what they do.
+
+4.1. Control of line endings
+The default line ending on Windows can be either "\r\n" (CRLF) or "\n" NL. The line ending is controlled by the ".crlf" dot-command. Use ".crlf on" to set the CRLF line ending and ".crlf off" for NL. As is traditional for Windows, CRLF is the default. However, this causes some outputs to be different than on non-Windows platforms due to the added "\r" characters. To cause the CLI to output results on Windows that are identical to the results on all other systems, run ".crlf off".
+
+On non-Windows platforms, the ".crlf" command is a no-op and the crlf mode is always "off". For CSV output, the line ending is always "\r\n" regardless of the .crlf setting, due to requirements of RFC-4180.
+
+4.2. Control characters in output
+By default (since version 3.50.0), the CLI avoids displaying most control characters in the range of U+0001 through U+001f even when such characters are within content strings that the CLI is trying to output. This is done to avoid problems when the output is viewed on a device that interprets ANSI escape codes. The CLI avoids showing most control characters, but makes the following exceptions: TAB (0x09), LF (0x0a) and CRLF (0x0d,0x0a). The exceptions are passed through into the output unchanged.
+
+The default behavior is for the CLI to display most control characters the same way the "cat -A" command does in Linux: For control character X, display two characters "^Y" where Y is X+0x40. For example, the "ESC" character (0x1b) is rendered as "^[" and the backspace character (0x08) is rendered as "^H".
+
+The rendering of control characters is governed by the "--escape T" command-line option to the CLI, or to the ".mode" dot-command, where T is the control-character handling algorithm. The default T is "ascii". If you change it to "--escape symbol" then control characters are mapped into printable unicode values in the range of U+2401 through U+241f. For example, ESC is rendered as "␛" and backspace becomes "␈". Setting "--escape off" turns off all control character mapping so that the characters output by the CLI are exactly what are in the database.
+
+5. Querying the database schema
+The sqlite3 program provides several convenience commands that are useful for looking at the schema of the database. There is nothing that these commands do that cannot be done by some other means. These commands are provided purely as a shortcut.
+
+For example, to see a list of the tables in the database, you can enter ".tables".
+
+sqlite> .tables
+tbl1 tbl2
+sqlite>
+The ".tables" command is similar to setting list mode then executing the following query:
+
+SELECT name FROM sqlite_schema
+WHERE type IN ('table','view') AND name NOT LIKE 'sqlite_%'
+ORDER BY 1
+But the ".tables" command does more. It queries the sqlite_schema table for all attached databases, not just the primary database. And it arranges its output into neat columns.
+
+The ".indexes" command works in a similar way to list all of the indexes. If the ".indexes" command is given an argument which is the name of a table, then it shows just indexes on that table.
+
+The ".schema" command shows the complete schema for the database, or for a single table if an optional tablename argument is provided:
+
+sqlite> .schema
+create table tbl1(one varchar(10), two smallint)
+CREATE TABLE tbl2 (
+  f1 varchar(30) primary key,
+  f2 text,
+  f3 real
+);
+sqlite> .schema tbl2
+CREATE TABLE tbl2 (
+  f1 varchar(30) primary key,
+  f2 text,
+  f3 real
+);
+sqlite>
+The ".schema" command is roughly the same as setting list mode, then entering the following query:
+
+SELECT sql FROM sqlite_schema
+ORDER BY tbl_name, type DESC, name
+As with ".tables", the ".schema" command shows the schema for all attached databases. If you only want to see the schema for a single database (perhaps "main") then you can add an argument to ".schema" to restrict its output:
+
+sqlite> .schema main.*
+The ".schema" command can be augmented with the "--indent" option, in which case it tries to reformat the various CREATE statements of the schema so that they are more easily readable by humans.
+
+The ".databases" command shows a list of all databases open in the current connection. There will always be at least 2. The first one is "main", the original database opened. The second is "temp", the database used for temporary tables. There may be additional databases listed for databases attached using the ATTACH statement. The first output column is the name the database is attached with, and the second result column is the filename of the external file. There may be a third result column which will be either "'r/o'" or "'r/w'" depending on whether the database file is read-only or read-write. And there might be a fourth result column showing the result of sqlite3_txn_state() for that database file.
+
+sqlite> .databases
+The ".fullschema" dot-command works like the ".schema" command in that it displays the entire database schema. But ".fullschema" also includes dumps of the statistics tables "sqlite_stat1", "sqlite_stat3", and "sqlite_stat4", if they exist. The ".fullschema" command normally provides all of the information needed to exactly recreate a query plan for a specific query. When reporting suspected problems with the SQLite query planner to the SQLite development team, developers are requested to provide the complete ".fullschema" output as part of the trouble report. Note that the sqlite_stat3 and sqlite_stat4 tables contain samples of index entries and so might contain sensitive data, so do not send the ".fullschema" output of a proprietary database over a public channel.
+
+6. Opening Database Files
+The ".open" command opens a new database connection, after first closing the previously opened database command. In its simplest form, the ".open" command merely invokes sqlite3_open() on the file named as its argument. Use the name ":memory:" to open a new in-memory database that disappears when the CLI exits or when the ".open" command is run again. Or use no name to open a private, temporary on-disk database which will also disappear upon exit or use of ".open".
+
+If the --new option is included with ".open", then the database is reset prior to being opened. Any prior data is destroyed. This is a destructive overwrite of prior data and no confirmation is requested, so use this option carefully.
+
+The --readonly option opens the database in read-only mode. Write will be prohibited.
+
+The --deserialize option causes the entire content of the on-disk file to be read into memory and then opened as an in-memory database using the sqlite3_deserialize() interface. This will, of course, require a lot of memory if you have a large database. Also, any changes you make to the database will not be saved back to disk unless you explicitly save them using the ".save" or ".backup" commands.
+
+The --append option causes the SQLite database to be appended to an existing file rather than working as a stand-alone file. See the appendvfs extension for more information.
+
+The --zip option causes the specified input file to be interpreted as a ZIP archive instead of as an SQLite database file.
+
+The --hexdb option causes the database content to be read from subsequent lines of input in a hex format, rather than from a separate file on disk. The ".dbtotxt" dot-command and/or the dbtotxt command-line tool can be used to generate the appropriate text for a database. The --hexdb option is intended for use by the SQLite developers for testing purposes. We do not know of any use cases for this option outside of internal SQLite testing and development.
